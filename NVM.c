@@ -12,8 +12,6 @@
 
 #include "FreeRTOS.h"
 #include "NVM.h"
-#include "HAL.h"
-#include "UART32.h"
 
 
 static uint8_t * pageBuffer;
@@ -27,14 +25,19 @@ void NVM_init(){
  
 static NVM_Result_t __attribute__((nomips16)) NVM_operation(unsigned int nvmop){
     int int_status;
-    int susp;
+    int dmaSusp;
+    int adcSusp;
     
     vTaskEnterCritical();
     
-    HAL_clearMainOutput();
+    //TODO: add nvm operation pre & post callback for this:
+    //HAL_clearMainOutput();
+    
+    adcSusp = AD1CON1bits.ASAM;
+    AD1CON1bits.ASAM = 0;
     
     //disable DMA
-    susp = DMACONbits.ON;
+    dmaSusp = DMACONbits.ON;
     DMACONbits.ON = 0;
     while(DMACONbits.DMABUSY);
     
@@ -53,7 +56,9 @@ static NVM_Result_t __attribute__((nomips16)) NVM_operation(unsigned int nvmop){
     NVMCONCLR = NVMCON_WREN;
     
     //re-enable DMA
-    DMACONbits.ON = susp;
+    DMACONbits.ON = dmaSusp;
+    
+    AD1CON1bits.ASAM = adcSusp;
     
     vTaskExitCritical();
     
@@ -139,6 +144,7 @@ static NVM_Result_t checkAndRebuffer(void* address){
                 vTaskExitCritical();
                 return NVM_ERROR;
             }
+            
             vTaskExitCritical();
         }
         
