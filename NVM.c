@@ -12,6 +12,7 @@
 
 #include "FreeRTOS.h"
 #include "NVM.h"
+#include "DMA.h"
 
 
 static uint8_t * pageBuffer;
@@ -30,17 +31,18 @@ static NVM_Result_t __attribute__((nomips16)) NVM_operation(unsigned int nvmop){
     
     vTaskEnterCritical();
     
-    //TODO: add nvm operation pre & post callback for this:
-    //HAL_clearMainOutput();
+    //TODO: add nvm operation pre & post callback
+    //TODO: move adc suspension to library
     
     adcSusp = AD1CON1bits.ASAM;
     AD1CON1bits.ASAM = 0;
     
-    //disable DMA
-    dmaSusp = DMACONbits.ON;
-    DMACONbits.ON = 0;
-    while(DMACONbits.DMABUSY);
-    
+//is the DMA lib available in this project?
+#if __has_include("DMA.h")
+    //yes. Suspend transfers
+    DMA_suspendAllTransfers();
+#endif    
+
     NVMCON = NVMCON_WREN | nvmop;
     {
     unsigned long t0 = _CP0_GET_COUNT();
@@ -55,8 +57,10 @@ static NVM_Result_t __attribute__((nomips16)) NVM_operation(unsigned int nvmop){
     
     NVMCONCLR = NVMCON_WREN;
     
-    //re-enable DMA
-    DMACONbits.ON = dmaSusp;
+#if __has_include("DMA.h")
+    //resume transfers if dma lib is present
+    DMA_resumeTransfers();
+#endif   
     
     AD1CON1bits.ASAM = adcSusp;
     
