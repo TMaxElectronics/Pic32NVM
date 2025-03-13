@@ -38,7 +38,7 @@ static NVM_Result_t __attribute__((nomips16)) NVM_operation(unsigned int nvmop){
     AD1CON1bits.ASAM = 0;
     
 //is the DMA lib available in this project?
-#if __has_include("DMA.h")
+#if !__is_compiling || __has_include("DMA.h")
     //yes. Suspend transfers
     DMA_suspendAllTransfers();
 #endif    
@@ -57,7 +57,7 @@ static NVM_Result_t __attribute__((nomips16)) NVM_operation(unsigned int nvmop){
     
     NVMCONCLR = NVMCON_WREN;
     
-#if __has_include("DMA.h")
+#if !__is_compiling || __has_include("DMA.h")
     //resume transfers if dma lib is present
     DMA_resumeTransfers();
 #endif   
